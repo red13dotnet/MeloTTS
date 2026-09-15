@@ -18,7 +18,6 @@ MATPLOTLIB_FLAG = False
 logger = logging.getLogger(__name__)
 
 
-
 def get_text_for_tts_infer(text, language_str, hps, device, symbol_to_id=None):
     norm_text, phone, tone, word2ph = clean_text(text, language_str)
     phone, tone, language = cleaned_text_to_sequence(phone, tone, language_str, symbol_to_id)
@@ -57,6 +56,7 @@ def get_text_for_tts_infer(text, language_str, hps, device, symbol_to_id=None):
     language = torch.LongTensor(language)
     return bert, ja_bert, phone, tone, language
 
+
 def load_checkpoint(checkpoint_path, model, optimizer=None, skip_optimizer=False):
     assert os.path.isfile(checkpoint_path)
     checkpoint_dict = torch.load(checkpoint_path, map_location="cpu")
@@ -69,7 +69,6 @@ def load_checkpoint(checkpoint_path, model, optimizer=None, skip_optimizer=False
     ):
         optimizer.load_state_dict(checkpoint_dict["optimizer"])
     elif optimizer is None and not skip_optimizer:
-        # else:      Disable this line if Infer and resume checkpoint,then enable the line upper
         new_opt_dict = optimizer.state_dict()
         new_opt_dict_params = new_opt_dict["param_groups"][0]["params"]
         new_opt_dict["param_groups"] = checkpoint_dict["optimizer"]["param_groups"]
@@ -85,7 +84,6 @@ def load_checkpoint(checkpoint_path, model, optimizer=None, skip_optimizer=False
     new_state_dict = {}
     for k, v in state_dict.items():
         try:
-            # assert "emb_g" not in k
             new_state_dict[k] = saved_state_dict[k]
             assert saved_state_dict[k].shape == v.shape, (
                 saved_state_dict[k].shape,
@@ -93,10 +91,9 @@ def load_checkpoint(checkpoint_path, model, optimizer=None, skip_optimizer=False
             )
         except Exception as e:
             print(e)
-            # For upgrading from the old version
             if "ja_bert_proj" in k:
                 v = torch.zeros_like(v)
-                logger.warn(
+                logger.warning(
                     f"Seems you are using the old version of the model, the {k} is automatically set to zero for backward compatibility"
                 )
             else:
@@ -173,7 +170,6 @@ def plot_spectrogram_to_numpy(spectrogram):
         mpl_logger = logging.getLogger("matplotlib")
         mpl_logger.setLevel(logging.WARNING)
     import matplotlib.pylab as plt
-    import numpy as np
 
     fig, ax = plt.subplots(figsize=(10, 2))
     im = ax.imshow(spectrogram, aspect="auto", origin="lower", interpolation="none")
@@ -183,8 +179,8 @@ def plot_spectrogram_to_numpy(spectrogram):
     plt.tight_layout()
 
     fig.canvas.draw()
-    data = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep="")
-    data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+    rgba = np.asarray(fig.canvas.buffer_rgba())
+    data = np.copy(rgba[:, :, :3])
     plt.close()
     return data
 
@@ -199,7 +195,6 @@ def plot_alignment_to_numpy(alignment, info=None):
         mpl_logger = logging.getLogger("matplotlib")
         mpl_logger.setLevel(logging.WARNING)
     import matplotlib.pylab as plt
-    import numpy as np
 
     fig, ax = plt.subplots(figsize=(6, 4))
     im = ax.imshow(
@@ -214,15 +209,15 @@ def plot_alignment_to_numpy(alignment, info=None):
     plt.tight_layout()
 
     fig.canvas.draw()
-    data = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep="")
-    data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+    rgba = np.asarray(fig.canvas.buffer_rgba())
+    data = np.copy(rgba[:, :, :3])
     plt.close()
     return data
 
 
 def load_wav_to_torch(full_path):
     sampling_rate, data = read(full_path)
-    return torch.FloatTensor(data.astype(np.float32)), sampling_rate
+    return torch.from_numpy(data.astype(np.float32)), sampling_rate
 
 
 def load_wav_to_torch_new(full_path):
@@ -230,9 +225,10 @@ def load_wav_to_torch_new(full_path):
     audio_norm = audio_norm.mean(dim=0)
     return audio_norm, sampling_rate
 
+
 def load_wav_to_torch_librosa(full_path, sr):
     audio_norm, sampling_rate = librosa.load(full_path, sr=sr, mono=True)
-    return torch.FloatTensor(audio_norm.astype(np.float32)), sampling_rate
+    return torch.from_numpy(audio_norm.astype(np.float32)), sampling_rate
 
 
 def load_filepaths_and_text(filename, split="|"):
@@ -254,27 +250,23 @@ def get_hparams(init=True):
     parser.add_argument('--world-size', type=int, default=1)
     parser.add_argument('--port', type=int, default=10000)
     parser.add_argument("-m", "--model", type=str, required=True, help="Model name")
-    parser.add_argument('--pretrain_G', type=str, default=None,
-                            help='pretrain model')
-    parser.add_argument('--pretrain_D', type=str, default=None,
-                            help='pretrain model D')
-    parser.add_argument('--pretrain_dur', type=str, default=None,
-                            help='pretrain model duration')
+    parser.add_argument('--pretrain_G', type=str, default=None, help='pretrain model')
+    parser.add_argument('--pretrain_D', type=str, default=None, help='pretrain model D')
+    parser.add_argument('--pretrain_dur', type=str, default=None, help='pretrain model duration')
 
     args = parser.parse_args()
     model_dir = os.path.join("./logs", args.model)
-
     os.makedirs(model_dir, exist_ok=True)
 
     config_path = args.config
     config_save_path = os.path.join(model_dir, "config.json")
     if init:
-        with open(config_path, "r") as f:
+        with open(config_path, "r", encoding="utf-8") as f:
             data = f.read()
-        with open(config_save_path, "w") as f:
+        with open(config_save_path, "w", encoding="utf-8") as f:
             f.write(data)
     else:
-        with open(config_save_path, "r") as f:
+        with open(config_save_path, "r", encoding="utf-8") as f:
             data = f.read()
     config = json.loads(data)
 
@@ -288,14 +280,6 @@ def get_hparams(init=True):
 
 
 def clean_checkpoints(path_to_models="logs/44k/", n_ckpts_to_keep=2, sort_by_time=True):
-    """Freeing up space by deleting saved ckpts
-
-    Arguments:
-    path_to_models    --  Path to the model directory
-    n_ckpts_to_keep   --  Number of ckpts to keep, excluding G_0.pth and D_0.pth
-    sort_by_time      --  True -> chronologically delete ckpts
-                          False -> lexicographically delete ckpts
-    """
     import re
 
     ckpts_files = [
@@ -305,7 +289,7 @@ def clean_checkpoints(path_to_models="logs/44k/", n_ckpts_to_keep=2, sort_by_tim
     ]
 
     def name_key(_f):
-        return int(re.compile("._(\\d+)\\.pth").match(_f).group(1))
+        return int(re.compile(r"._(\d+)\.pth").match(_f).group(1))
 
     def time_key(_f):
         return os.path.getmtime(os.path.join(path_to_models, _f))
@@ -355,7 +339,7 @@ def get_hparams_from_file(config_path):
 def check_git_hash(model_dir):
     source_dir = os.path.dirname(os.path.realpath(__file__))
     if not os.path.exists(os.path.join(source_dir, ".git")):
-        logger.warn(
+        logger.warning(
             "{} is not a git repository, therefore hash value comparison will be ignored.".format(
                 source_dir
             )
@@ -366,15 +350,17 @@ def check_git_hash(model_dir):
 
     path = os.path.join(model_dir, "githash")
     if os.path.exists(path):
-        saved_hash = open(path).read()
+        with open(path, "r", encoding="utf-8") as f:
+            saved_hash = f.read()
         if saved_hash != cur_hash:
-            logger.warn(
+            logger.warning(
                 "git hash values are different. {}(saved) != {}(current)".format(
                     saved_hash[:8], cur_hash[:8]
                 )
             )
     else:
-        open(path, "w").write(cur_hash)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(cur_hash)
 
 
 def get_logger(model_dir, filename="train.log"):
@@ -395,7 +381,7 @@ def get_logger(model_dir, filename="train.log"):
 class HParams:
     def __init__(self, **kwargs):
         for k, v in kwargs.items():
-            if type(v) == dict:
+            if isinstance(v, dict):
                 v = HParams(**v)
             self[k] = v
 

@@ -1,8 +1,8 @@
 import re
 
 # List of (regular expression, replacement) pairs for abbreviations in english:
-abbreviations_en = [
-    (re.compile("\\b%s\\." % x[0], re.IGNORECASE), x[1])
+abbreviations_en: list[tuple[re.Pattern, str]] = [
+    (re.compile(rf"\b{x[0]}\.", re.IGNORECASE), x[1])
     for x in [
         ("mrs", "misess"),
         ("mr", "mister"),
@@ -25,11 +25,12 @@ abbreviations_en = [
     ]
 ]
 
-def expand_abbreviations(text, lang="en"):
+
+def expand_abbreviations(text: str, lang: str = "en") -> str:
     if lang == "en":
         _abbreviations = abbreviations_en
     else:
-        raise NotImplementedError()
+        raise NotImplementedError(f"Language '{lang}' is not supported.")
     for regex, replacement in _abbreviations:
         text = re.sub(regex, replacement, text)
     return text

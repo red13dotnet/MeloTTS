@@ -1,16 +1,15 @@
 import re
-
 import inflect
 
 _inflect = inflect.engine()
 
 _time_re = re.compile(
     r"""\b
-                          ((0?[0-9])|(1[0-1])|(1[2-9])|(2[0-3]))  # hours
-                          :
-                          ([0-5][0-9])                            # minutes
-                          \s*(a\\.m\\.|am|pm|p\\.m\\.|a\\.m|p\\.m)? # am/pm
-                          \b""",
+    ((0?[0-9])|(1[0-1])|(1[2-9])|(2[0-3]))     # hours
+    :
+    ([0-5][0-9])                               # minutes
+    \s*(a\.m\.|am|pm|p\.m\.|a\.m|p\.m)?        # am/pm
+    \b""",
     re.IGNORECASE | re.X,
 )
 
@@ -19,7 +18,7 @@ def _expand_num(n: int) -> str:
     return _inflect.number_to_words(n)
 
 
-def _expand_time_english(match: "re.Match") -> str:
+def _expand_time_english(match: re.Match) -> str:
     hour = int(match.group(1))
     past_noon = hour >= 12
     time = []

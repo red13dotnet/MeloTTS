@@ -1,8 +1,8 @@
 import re
 
-# List of (regular expression, replacement) pairs for abbreviations in french:
-abbreviations_fr = [
-    (re.compile("\\b%s\\." % x[0], re.IGNORECASE), x[1])
+# List of (regular expression, replacement) pairs for abbreviations in French:
+abbreviations_fr: list[tuple[re.Pattern, str]] = [
+    (re.compile(rf"\b{x[0]}\.", re.IGNORECASE), x[1])
     for x in [
         ("M", "monsieur"),
         ("Mlle", "mademoiselle"),
@@ -10,7 +10,6 @@ abbreviations_fr = [
         ("Mme", "Madame"),
         ("Mmes", "Mesdames"),
         ("N.B", "nota bene"),
-        ("M", "monsieur"),
         ("p.c.q", "parce que"),
         ("Pr", "professeur"),
         ("qqch", "quelque chose"),
@@ -35,10 +34,9 @@ abbreviations_fr = [
         ("etc", "et cetera"),
         ("ex", "exemple"),
         ("excl", "exclusivement"),
-        ("boul", "boulevard"),
     ]
 ] + [
-    (re.compile("\\b%s" % x[0]), x[1])
+    (re.compile(rf"\b{x[0]}"), x[1])
     for x in [
         ("Mlle", "mademoiselle"),
         ("Mlles", "mesdemoiselles"),
